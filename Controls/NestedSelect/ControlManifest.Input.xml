@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <manifest>
-  <control namespace="Scoular.PCF" constructor="NestedSelect" version="0.0.41" display-name-key="NestedSelect" description-key="NestedSelect description" control-type="standard">
+  <control namespace="Scoular.PCF" constructor="NestedSelect" version="0.0.64" display-name-key="NestedSelect" description-key="NestedSelect description" control-type="standard">
     <!-- property node identifies a specific, configurable piece of data that the control expects from CDS -->
     <!-- <property name="sampleProperty" display-name-key="Property_Display_Key" description-key="Property_Desc_Key" of-type="SingleLine.Text" usage="bound" required="true" /> -->
     <data-set name="dataset" display-name-key="Dataset" />
     <property name="filterField" display-name-key="Filtering Field" description-key="Field to filter the tree by" of-type="OptionSet" usage="input" required="true" />
+    
       <!-- <property-set name="optionset1" display-name-key="Optionset 1" description-key="Property_Desc_Key" of-type="Lookup" usage="bound" required="false" /> -->
       <!-- 'property-set' node represents a unique, configurable property that each record in the dataset must provide. -->
       <!-- UNCOMMENT TO ADD PROPERTY-SET NODE

@@ -9,16 +9,22 @@ import { createListItems, createGroups, IExampleItem } from '@uifabric/example-d
 import { IInputs } from './generated/ManifestTypes';
 import { ISelection } from '@fluentui/react';
 
+declare var Xrm: any;
+
 export interface INestedSelectorProps {
-    context: ComponentFramework.Context<IInputs>;
+  context: ComponentFramework.Context<IInputs>;
+  allBaseItems: any[];
+  selectedFilter: string;
 }
 
 const toggleStyles: Partial<IToggleStyles> = { root: { marginBottom: '20px' } };
 
 const groupCount = 3;
 const groupDepth = 5;
-const items = createListItems(Math.pow(groupCount, groupDepth + 1));
 
+let _context: ComponentFramework.Context<IInputs>;
+
+const items = createListItems(Math.pow(groupCount, groupDepth + 1));
 
 const columns = Object.keys(items[0])
   .slice(0, 3)
@@ -34,56 +40,73 @@ const columns = Object.keys(items[0])
 const groups = createGroups(groupCount, groupDepth, 0, groupCount);
 
 export const NestedSelector = React.memo(function NestedSelectApp({
-    context
-} : INestedSelectorProps) : JSX.Element {
-    console.log(context);
-      const [isCompactMode, { toggle: toggleIsCompactMode }] = useBoolean(false);
-        const selection = useConst(() => {
-        const s = new Selection();
-            s.setItems(items, true);
-            return s;
-        });
+  context, allBaseItems, selectedFilter
+}: INestedSelectorProps): JSX.Element {
+  _context = context;
 
-        const onRenderCell = (nestingDepth?: number, item?: IExampleItem, itemIndex?: number): React.ReactNode => {
-            return item && typeof itemIndex === 'number' && itemIndex > -1 ? (
-                <DetailsRow
-                    columns={columns}
-                    groupNestingDepth={nestingDepth}
-                    item={item}
-                    itemIndex={itemIndex}
-                    selection={selection}
-                    selectionMode={SelectionMode.multiple}
-                    compact={isCompactMode}
-                />
-            ) : null;
-        };
+  const [allItems, setAllItems] = React.useState(allBaseItems);
+  React.useEffect(() => {
+    setAllItems(allBaseItems);
+  }, [allBaseItems]);
 
-        console.log(selection);
+  const [filteredItems, setFilteredItems] = React.useState(allItems);
+  React.useEffect(() => {
+    setFilteredItems(allItems.filter(ai => ai.data.av_name === selectedFilter));
+  }, [selectedFilter])
 
-        return (
-            <div>
-                <Toggle
-                    label="Enable compact mode"
-                    checked={isCompactMode}
-                    onChange={toggleIsCompactMode}
-                    onText="Compact"
-                    offText="Normal"
-                    styles={toggleStyles}
-                />
-                <SelectionZone selection={selection} selectionMode={SelectionMode.multiple}>
-                    <GroupedList
-                        items={items}
-                        // eslint-disable-next-line react/jsx-no-bind
-                        onRenderCell={onRenderCell}
-                        selection={selection}
-                        selectionMode={SelectionMode.multiple}
-                        groups={groups}
-                        compact={isCompactMode}
-                    />
-                </SelectionZone>
-            </div>
-        );
-    }
+  const [isCompactMode, { toggle: toggleIsCompactMode }] = useBoolean(false);
+  const selection = useConst(() => {
+    const s = new Selection();
+    s.setItems(filteredItems, true);
+    return s;
+  });
+
+  const onRenderCell = (nestingDepth?: number, item?: IExampleItem, itemIndex?: number): React.ReactNode => {
+    return item && typeof itemIndex === 'number' && itemIndex > -1 ? (
+      <DetailsRow
+        columns={columns}
+        groupNestingDepth={nestingDepth}
+        item={item}
+        itemIndex={itemIndex}
+        selection={selection}
+        selectionMode={SelectionMode.multiple}
+        compact={isCompactMode}
+      />
+    ) : null;
+  };
+
+  console.log(selection);
+  console.log(filteredItems);
+
+  console.log(items);
+  console.log(columns);
+  console.log(groups);
+
+
+  return (
+    <div>
+      <Toggle
+        label="Enable compact mode"
+        checked={isCompactMode}
+        onChange={toggleIsCompactMode}
+        onText="Compact"
+        offText="Normal"
+        styles={toggleStyles}
+      />
+      <SelectionZone selection={selection} selectionMode={SelectionMode.multiple}>
+        <GroupedList
+          items={filteredItems}
+          // eslint-disable-next-line react/jsx-no-bind
+          onRenderCell={onRenderCell}
+          selection={selection}
+          selectionMode={SelectionMode.multiple}
+          groups={groups}
+          compact={isCompactMode}
+        />
+      </SelectionZone>
+    </div>
+  );
+}
 );
 
 
