@@ -7,7 +7,7 @@ import { arrayToTree } from 'performant-array-to-tree';
 // type DataSet = ComponentFramework.PropertyTypes.DataSet;
 
 // type OptionSet = ComponentFramework.PropertyTypes.OptionSetProperty;
-type OptionMetadata = ComponentFramework.PropertyHelper.OptionMetadata;
+// type OptionMetadata = ComponentFramework.PropertyHelper.OptionMetadata;
 
 declare var Xrm: any;
 
@@ -16,43 +16,19 @@ export class NestedSelect implements ComponentFramework.StandardControl<IInputs,
 	private _container: HTMLDivElement;
 	private _contextObj: ComponentFramework.Context<IInputs>;
 	private _notifyOutputChanged: () => void;
-	private _props: INestedSelectorProps;
+	private _isValidState: boolean;
 
 	// Div element created as part of this control's main container
-	private mainContainer: HTMLSelectElement;
 	private errorElement: HTMLDivElement;
 	private selectedItems: string[] = [];
-	private allItems: any[];
+	private _allItemsNested: any[];
+	private _allItemsFlat: any[];
 	// private filteredItems: any[];
-
-	private _onFilterClickCheck: string;
-	// private _filterField: OptionSet;
-	private _filterFieldValue: number;
-	private _filterOptions: Array<OptionMetadata>;
-
-	// private overlayDiv: HTMLDivElement;
-	// private container: HTMLDivElement;
-	private _isValidState: boolean = true;
-
-	// private _relData : NToNData;
-
-	// private _linkedEntityName: string;
-	// private _relationshipEntity: string;
-	// private _relationshipName: string;
-	// private _idAttribute: string;
-	// private _nameAttribute: string;
-	// private _linkedEntityFetchXmlResource: string;
-
-	private _linkedEntityCollectionName: string;
-	private _mainEntityCollectionName: string;
 
 	private _entityMetadataSuccessCallback: any;
 	private _linkedEntityMetadataSuccessCallback: any;
 	private _relationshipSuccessCallback: any;
 	private _successCallback: any;
-
-	private _ctrlId: string;
-
 
 	/**
 	 * Empty constructor.
@@ -62,21 +38,19 @@ export class NestedSelect implements ComponentFramework.StandardControl<IInputs,
 	}
 
 	private renderGrid() {
-		if (this.allItems.length > 0) {
-			if (this._contextObj.parameters.filterField != null) {
-				this._filterFieldValue = this._contextObj.parameters.filterField.raw!;
-			} else {
-				this._filterFieldValue = 0;
-			}
-
-			this._props = {
+		if (this._allItemsFlat.length > 0) {
+			const props: INestedSelectorProps = {
 				context: this._contextObj,
-				allBaseItems: this.allItems,
-				selectedFilter: "Customer" //selectedSet.Label
+				allBaseItemsNested: this._allItemsNested,
+				allBaseItemsFlat: this._allItemsFlat,
+				selectedFilter: this._contextObj.parameters.filterField.formatted || "",
+				selectedItems: this.selectedItems
 			}
 			
-			const element: React.ReactElement = React.createElement(NestedSelector2, this._props);
+			const element: React.ReactElement = React.createElement(NestedSelector2, props);
 			ReactDom.render(element, this._container);
+		} else {
+			console.log("Have no data");
 		}
 	}
 
@@ -91,29 +65,22 @@ export class NestedSelect implements ComponentFramework.StandardControl<IInputs,
 	public init(context: ComponentFramework.Context<IInputs>, notifyOutputChanged: () => void, state: ComponentFramework.Dictionary, container: HTMLDivElement) {
 		this._container = container;
 		this._contextObj = context;
-		this._notifyOutputChanged = notifyOutputChanged;
 
-		// this.renderGrid();
+		this._notifyOutputChanged = notifyOutputChanged;
 
 		if (typeof Xrm == 'undefined') {
 			this.errorElement = document.createElement("div");
 			this.errorElement.innerHTML = "<H2>This control only works on model-driven forms!</H2>";
-			container.appendChild(this.errorElement);
+			this._container.appendChild(this.errorElement);
 			this._isValidState = false;
 		}
 		else {
 			context.mode.trackContainerResize(true);
-
-			this._entityMetadataSuccessCallback = this.entityMetadataSuccessCallback.bind(this);
-			this._linkedEntityMetadataSuccessCallback = this.linkedEntityMetadataSuccessCallback.bind(this);
 			this._relationshipSuccessCallback = this.relationshipSuccessCallback.bind(this);
 			this._successCallback = this.successCallback.bind(this);
 
-			this._notifyOutputChanged = notifyOutputChanged;
-
 			(<any>Xrm).Utility.getEntityMetadata((<any>this._contextObj).page.entityTypeName, []).then(this._entityMetadataSuccessCallback, this.errorCallback);
 			(<any>Xrm).Utility.getEntityMetadata("av_companytype", []).then(this._linkedEntityMetadataSuccessCallback, this.errorCallback);
-			//(<any>Xrm).WebApi.retrieveMultipleRecords(this._relationshipEntity, "?$filter="+ (<any>this.contextObj).page.entityTypeName+"id eq " + (<any>this.contextObj).page.entityId, 5000).then(this._relationshipSuccessCallback, this.errorCallback);
 
 			if ((<any>this._contextObj).page.entityId != null
 				&& (<any>this._contextObj).page.entityId != "00000000-0000-0000-0000-000000000000") {
@@ -152,23 +119,16 @@ export class NestedSelect implements ComponentFramework.StandardControl<IInputs,
 		ReactDom.unmountComponentAtNode(this._container);
 	}
 
-	public entityMetadataSuccessCallback(value: any): void | PromiseLike<void> {
-		this._mainEntityCollectionName = value.EntitySetName;
-	}
-
-	public linkedEntityMetadataSuccessCallback(value: any): void | PromiseLike<void> {
-		this._linkedEntityCollectionName = value.EntitySetName;
-	}
-
 	public addOptions(value: any) {
-		for (const i in value.entities) {
-			const current: any = value.entities[i];
-			const checked = this.selectedItems.indexOf(<string>current["av_companytypeid"]) > -1;
+		// for (const i in value.entities) {
+		// 	const current: any = value.entities[i];
+		// 	const checked = this.selectedItems.indexOf(<string>current["av_companytypeid"]) > -1;
 
-			current["selected"] = checked;
-		}
+		// 	current["selected"] = checked;
+		// }
 
-		this.allItems = arrayToTree(value.entities, {
+		this._allItemsFlat = value.entities;
+		this._allItemsNested = arrayToTree(value.entities, {
 			id: 'av_companytypeid',
 			parentId: '_av_parent_value',
 			childrenField: 'children',
