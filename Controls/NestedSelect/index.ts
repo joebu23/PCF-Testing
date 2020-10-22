@@ -2,8 +2,7 @@ import { IInputs, IOutputs } from "./generated/ManifestTypes";
 import DataSetInterfaces = ComponentFramework.PropertyHelper.DataSetApi;
 import * as React from "react";
 import * as ReactDom from "react-dom";
-import { ContextualMenu } from "@fluentui/react";
-import { INestedSelectorProps, NestedSelector } from "./NestedSelector";
+import NestedSelector2, { INestedSelectorProps } from "./NestedSelector";
 import { arrayToTree } from 'performant-array-to-tree';
 // type DataSet = ComponentFramework.PropertyTypes.DataSet;
 
@@ -70,28 +69,14 @@ export class NestedSelect implements ComponentFramework.StandardControl<IInputs,
 				this._filterFieldValue = 0;
 			}
 
-			// if (this._contextObj.parameters.filterField.attributes) {
-			// 	this._filterOptions = this._contextObj.parameters.filterField.attributes?.Options!;
-			// }
-
-			// const selectedSet = this._filterOptions.filter(val => val.Value === this._filterFieldValue)[0];
-			// 	this.filteredItems = this.allItems.filter(ai => ai.data.av_name === selectedSet.Label);
-
 			this._props = {
-				// dataset: this._contextObj.parameters.dataset,
 				context: this._contextObj,
 				allBaseItems: this.allItems,
 				selectedFilter: "Customer" //selectedSet.Label
-				// allItems: this.allItems,
-				// filteredItems: this.filteredItems
 			}
-
-			const element: React.ReactElement<INestedSelectorProps> = React.createElement(
-				NestedSelector, this._props);
-
+			
+			const element: React.ReactElement = React.createElement(NestedSelector2, this._props);
 			ReactDom.render(element, this._container);
-
-			// ReactDom.render(React.createElement(NestedSelector, props), this._container);
 		}
 	}
 
@@ -107,6 +92,8 @@ export class NestedSelect implements ComponentFramework.StandardControl<IInputs,
 		this._container = container;
 		this._contextObj = context;
 		this._notifyOutputChanged = notifyOutputChanged;
+
+		// this.renderGrid();
 
 		if (typeof Xrm == 'undefined') {
 			this.errorElement = document.createElement("div");
@@ -135,9 +122,6 @@ export class NestedSelect implements ComponentFramework.StandardControl<IInputs,
 			else {
 				this.relationshipSuccessCallback(null);
 			}
-
-			// 	var thisVar: any;
-			// 	thisVar = this;
 		}
 	}
 
@@ -150,14 +134,6 @@ export class NestedSelect implements ComponentFramework.StandardControl<IInputs,
 		console.log(context.updatedProperties);
 		console.log('view change');
 		this.renderGrid();
-		// // Add code to update control view
-		// this._props = {
-		// 	context: this._contextObj,
-		// 	allItems: this.allItems,
-		// 	selectedFilter: this._filterFieldValue
-		// };
-
-		// ReactDom.render(React.createElement(NestedSelector, this._props), this._container);
 	}
 
 	/** 
@@ -173,9 +149,7 @@ export class NestedSelect implements ComponentFramework.StandardControl<IInputs,
 	 * i.e. cancelling any pending remote calls, removing listeners, etc.
 	 */
 	public destroy(): void {
-		// Add code to cleanup control if necessary
 		ReactDom.unmountComponentAtNode(this._container);
-		// ReactDOM.unmountComponentAtNode(this._container);
 	}
 
 	public entityMetadataSuccessCallback(value: any): void | PromiseLike<void> {
@@ -194,77 +168,11 @@ export class NestedSelect implements ComponentFramework.StandardControl<IInputs,
 			current["selected"] = checked;
 		}
 
-		const result: any[] = [];
-		const itemMap = (e: any) => {
-			result.push({
-				name: e.av_name,
-				id: e.av_companytypeid,
-				parentId: e._av_parent_value,
-				selected: e.selected
-			});
-		}
-
-		value.entities.map(itemMap);
-
-		const testtest = arrayToTree(result, {
-			id: 'id',
-			parentId: 'parentId',
-			childrenField: 'children'
+		this.allItems = arrayToTree(value.entities, {
+			id: 'av_companytypeid',
+			parentId: '_av_parent_value',
+			childrenField: 'children',
 		});
-
-		console.log(testtest);
-		this.allItems = testtest;
-		
-		// const convertedItems = arrayToTree(value.entities, {
-		// 	id: 'av_companytypeid',
-		// 	parentId: '_av_parent_value',
-		// 	childrenField: 'children',
-		// });
-
-		// const result: ListItem[] = [];
-		// const itemMap = (e: any) => {
-		// 	let allChildren: ListItem[] = [];
-		// 	if (e.children.length > 0) {
-		// 		allChildren = e.children.forEach(itemMap);
-		// 	}
-
-		// 	result.push({
-		// 		name: e.data.av_name,
-		// 		id: e.data.av_companytypeid,
-		// 		selected: e.data.selected
-		// 	});
-		// }
-
-		// convertedItems.forEach(itemMap);
-
-		// this.allItems = result;
-		
-		// this.allItems = convertedItems.map((item) => {
-		// 	var childrenCount = item.children.length;
-		// 	let children: ListItem[] = [];
-
-		// 	if (childrenCount > 0) {
-
-		// 	}
-
-		// 	return {
-		// 		name: item.av_name,
-		// 		children: children,
-		// 		id: item.av_companytypeid,
-		// 		selected: item.selected
-		// 	}
-		// })
-
-		// const columns = Object.keys(items[0])
-//   .slice(0, 3)
-//   .map(
-//     (key: string): IColumn => ({
-//       key: key,
-//       name: key,
-//       fieldName: key,
-//       minWidth: 300,
-//     }),
-//   );
 
 		this.renderGrid();
 	}

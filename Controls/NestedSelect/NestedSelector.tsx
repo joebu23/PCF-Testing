@@ -1,20 +1,12 @@
 import * as React from 'react';
-import { useEffect, useState } from 'react';
-import { GroupedList } from 'office-ui-fabric-react/lib/GroupedList';
-import { IColumn, DetailsRow, IObjectWithKey } from 'office-ui-fabric-react/lib/DetailsList';
-import { Selection, SelectionMode, SelectionZone } from 'office-ui-fabric-react/lib/Selection';
-import { Toggle, IToggleStyles } from 'office-ui-fabric-react/lib/Toggle';
-import { useBoolean, useConst } from '@uifabric/react-hooks';
-import { createListItems, createGroups, IExampleItem } from '@uifabric/example-data';
 import { IInputs } from './generated/ManifestTypes';
-import { ISelection } from '@fluentui/react';
 import { makeStyles } from '@material-ui/core/styles';
 import TreeView from '@material-ui/lab/TreeView';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import ChevronRightIcon from '@material-ui/icons/ChevronRight';
 import TreeItem from '@material-ui/lab/TreeItem';
 
-declare var Xrm: any;
+// declare var Xrm: any;
 
 export interface INestedSelectorProps {
   context: ComponentFramework.Context<IInputs>;
@@ -22,32 +14,29 @@ export interface INestedSelectorProps {
   selectedFilter: string;
 }
 
-const toggleStyles: Partial<IToggleStyles> = { root: { marginBottom: '20px' } };
-
-const groupCount = 3;
-const groupDepth = 5;
-
 let _context: ComponentFramework.Context<IInputs>;
 
-const items = createListItems(Math.pow(groupCount, groupDepth + 1));
-
-const columns = Object.keys(items[0])
-  .slice(0, 3)
-  .map(
-    (key: string): IColumn => ({
-      key: key,
-      name: key,
-      fieldName: key,
-      minWidth: 300,
-    }),
-  );
-
-const groups = createGroups(groupCount, groupDepth, 0, groupCount);
-
-export const NestedSelector = React.memo(function NestedSelectApp({
-  context, allBaseItems, selectedFilter
-}: INestedSelectorProps): JSX.Element {
+function NestedSelector2({context, allBaseItems, selectedFilter}: INestedSelectorProps) {
   _context = context;
+
+  const useStyles = makeStyles({
+    root: {
+      height: 216,
+      flexGrow: 1,
+      maxWidth: 400,
+    },
+  });
+
+  const [expanded, setExpanded] = React.useState<string[]>([]);
+  const [selected, setSelected] = React.useState<string[]>([]);
+
+  const handleToggle = (event: React.ChangeEvent<{}>, nodeIds: string[]) => {
+    setExpanded(nodeIds);
+  };
+
+  const handleSelect = (event: React.ChangeEvent<{}>, nodeIds: string[]) => {
+    setSelected(nodeIds);
+  };
 
   const [allItems, setAllItems] = React.useState(allBaseItems);
   React.useEffect(() => {
@@ -56,297 +45,122 @@ export const NestedSelector = React.memo(function NestedSelectApp({
 
   const [filteredItems, setFilteredItems] = React.useState(allItems);
   React.useEffect(() => {
-    setFilteredItems(allItems.filter(ai => ai.data.av_name === selectedFilter));
+    setFilteredItems(allItems.filter(ai => ai.data.av_name === selectedFilter)[0]);
   }, [selectedFilter])
 
-  const [isCompactMode, { toggle: toggleIsCompactMode }] = useBoolean(false);
-  const selection = useConst(() => {
-    const s = new Selection();
-    s.setItems(filteredItems, true);
-    return s;
-  });
+  const classes = useStyles();
 
-  const onRenderCell = (nestingDepth?: number, item?: IExampleItem, itemIndex?: number): React.ReactNode => {
-    return item && typeof itemIndex === 'number' && itemIndex > -1 ? (
-      <DetailsRow
-        columns={columns}
-        groupNestingDepth={nestingDepth}
-        item={item}
-        itemIndex={itemIndex}
-        selection={selection}
-        selectionMode={SelectionMode.multiple}
-        compact={isCompactMode}
-      />
-    ) : null;
-  };
-
-  console.log(selection);
+  console.log(allItems);
   console.log(filteredItems);
-
-  console.log(items);
-  console.log(columns);
-  console.log(groups);
-
 
   return (
     <div>
-      <Toggle
-        label="Enable compact mode"
-        checked={isCompactMode}
-        onChange={toggleIsCompactMode}
-        onText="Compact"
-        offText="Normal"
-        styles={toggleStyles}
-      />
-      <SelectionZone selection={selection} selectionMode={SelectionMode.multiple}>
-        <GroupedList
-          items={filteredItems}
-          // eslint-disable-next-line react/jsx-no-bind
-          onRenderCell={onRenderCell}
-          selection={selection}
-          selectionMode={SelectionMode.multiple}
-          groups={groups}
-          compact={isCompactMode}
-        />
-      </SelectionZone>
+      <TreeView
+        className={classes.root}
+        defaultCollapseIcon={<ExpandMoreIcon />}
+        defaultExpandIcon={<ChevronRightIcon />}
+        expanded={expanded}
+        selected={selected}
+        onNodeToggle={handleToggle}
+        onNodeSelect={handleSelect}
+      >
+        <TreeItem nodeId="1" label="Applications">
+          <TreeItem nodeId="2" label="Calendar" />
+          <TreeItem nodeId="3" label="Chrome" />
+          <TreeItem nodeId="4" label="Webstorm" />
+        </TreeItem>
+        <TreeItem nodeId="5" label="Documents">
+          <TreeItem nodeId="6" label="Material-UI">
+            <TreeItem nodeId="7" label="src">
+              <TreeItem nodeId="8" label="index.js" />
+              <TreeItem nodeId="9" label="tree-view.js" />
+            </TreeItem>
+          </TreeItem>
+        </TreeItem>
+      </TreeView>
     </div>
   );
 }
-);
+
+export default NestedSelector2;
 
 
+// const onRenderCell = (nestingDepth?: number, item?: IExampleItem, itemIndex?: number): React.ReactNode => {
+//   return item && typeof itemIndex === 'number' && itemIndex > -1 ? (
+//     <DetailsRow
+//       columns={columns}
+//       groupNestingDepth={nestingDepth}
+//       item={item}
+//       itemIndex={itemIndex}
+//       selection={selection}
+//       selectionMode={SelectionMode.multiple}
+//       compact={isCompactMode}
+//     />
+//   ) : null;
+// };
+// export const NestedSelector = React.memo(function NestedSelectApp({
+//   context, allBaseItems, selectedFilter
+// }: INestedSelectorProps): JSX.Element {
+//   _context = context;
 
-// type DataSet = ComponentFramework.PropertyTypes.DataSet;
-// type OptionMetadata = ComponentFramework.PropertyHelper.OptionMetadata;
-// declare var Xrm: any;
+//   const [allItems, setAllItems] = React.useState(allBaseItems);
+//   React.useEffect(() => {
+//     setAllItems(allBaseItems);
+//   }, [allBaseItems]);
 
-// const toggleStyles: Partial<IToggleStyles> = { root: { marginBottom: '20px' } };
+//   const [filteredItems, setFilteredItems] = React.useState(allItems);
+//   React.useEffect(() => {
+//     setFilteredItems(allItems.filter(ai => ai.data.av_name === selectedFilter));
+//   }, [selectedFilter])
 
-// const groupCount = 3;
-// const groupDepth = 3;
-// const items = createListItems(Math.pow(groupCount, groupDepth + 1));
-// const columns = Object.keys(items[0])
-//     .slice(0, 3)
-//     .map(
-//         (key: string): IColumn => ({
-//             key: key,
-//             name: key,
-//             fieldName: key,
-//             minWidth: 300,
-//         }),
-//     );
+//   const useStyles = makeStyles({
+//     root: {
+//       height: 216,
+//       flexGrow: 1,
+//       maxWidth: 400,
+//     },
+//   });
 
-// const groups = createGroups(groupCount, groupDepth, 0, groupCount);
+//   const [expanded, setExpanded] = React.useState<string[]>([]);
+//   const [selected, setSelected] = React.useState<string[]>([]);
 
+//   const handleToggle = (event: React.ChangeEvent<{}>, nodeIds: string[]) => {
+//     setExpanded(nodeIds);
+//   };
 
-// // const selection = useConst(() => {
-// //     const s = new Selection();
-// //     s.setItems(items, true);
-// //     return s;
-// // });
+//   const handleSelect = (event: React.ChangeEvent<{}>, nodeIds: string[]) => {
+//     setSelected(nodeIds);
+//   };
 
-// function useSelection() {
-//     // const [selection, setItems] = useState(null);
+//   const classes = useStyles();
+//   // console.log(filteredItems);
 
-//     const selection = useConst(() => {
-//         const s = new Selection();
-//         s.setItems(items, true);
-//         return s;
-//     });
-
-//     return selection;
-//     // function handleSelectionChange(selectionId: string) {
-//     //   setItems(selectionId);
-//     // }
-
-//     // useEffect(() => {
-
-//     //   ChatAPI.subscribeToFriendStatus(friendID, handleStatusChange);
-//     //   return () => {
-//     //     ChatAPI.unsubscribeFromFriendStatus(friendID, handleStatusChange);
-//     //   };
-//     // });
-
-//     // return isOnline;
+//   return (
+//     <div>
+//       <TreeView
+//       className={classes.root}
+//       defaultCollapseIcon={<ExpandMoreIcon />}
+//       defaultExpandIcon={<ChevronRightIcon />}
+//       expanded={expanded}
+//       selected={selected}
+//       onNodeToggle={handleToggle}
+//       onNodeSelect={handleSelect}
+//     >
+//       <TreeItem nodeId="1" label="Applications">
+//         <TreeItem nodeId="2" label="Calendar" />
+//         <TreeItem nodeId="3" label="Chrome" />
+//         <TreeItem nodeId="4" label="Webstorm" />
+//       </TreeItem>
+//       <TreeItem nodeId="5" label="Documents">
+//         <TreeItem nodeId="6" label="Material-UI">
+//           <TreeItem nodeId="7" label="src">
+//             <TreeItem nodeId="8" label="index.js" />
+//             <TreeItem nodeId="9" label="tree-view.js" />
+//           </TreeItem>
+//         </TreeItem>
+//       </TreeItem>
+//     </TreeView>
+//     </div>
+//   );
 // }
-
-// export class NestedSelector extends React.Component<INestedSelectorProps> {
-//     private _properties: any;
-//     private _context: any; // ComponentFramework.Context<IInputs>;
-
-//     private _successCallback: any;
-//     private _relationshipSuccessCallback: any;
-
-//     // private selection: Selection<IObjectWithKey>;
-
-
-//     constructor(props: INestedSelectorProps) {
-//         super(props);
-//         this._properties = props;
-//         this._context = this._properties.context;
-
-//         this.state = {
-//             allItems: [],
-//             filteredItems: [],
-//             selectedItems: []
-//         }
-
-//         console.log(this.props);
-
-
-//     }
-
-//     public getData() {
-//         this._context.webAPI.retrieveMultipleRecords("av_account_av_companytype", "?$filter=" + this._context.page.entityTypeName + "id eq " + this._context.page.entityId, 5000).then(this._relationshipSuccessCallback, this.errorCallback);
-//     }
-
-//     public relationshipSuccessCallback(value: any): void | PromiseLike<void> {
-//         if (value != null) {
-//             for (var i in value.entities) {
-//                 // this.selectedItems.push(value.entities[i]["av_companytypeid"]);
-//             }
-//         }
-
-//         this._context.webAPI.retrieveMultipleRecords("av_companytype", "?$orderby=" + "av_name" + " asc", 5000).then(this._successCallback, this.errorCallback);
-//     }
-
-//     public errorCallback(value: any) {
-//         console.log(value);
-//         alert(value);
-//     }
-
-//     public addOptions(value: any) {
-//         // for (var i in value.entities) {
-//         // 	var current: any = value.entities[i];
-//         // 	var checked = this.selectedItems.indexOf(<string>current["av_companytypeid"]) > -1;
-
-//         // 	current["selected"] = checked;
-//         // }
-
-//         // this.allItems = arrayToTree(value.entities, {
-//         // 	id: 'av_companytypeid',
-//         // 	parentId: '_av_parent_value',
-//         // 	childrenField: 'children',
-//         // });
-
-//         // this.renderGrid();
-//     }
-
-
-//     public successCallback(value: any): void {
-//         // this.addOptions(value);
-//     }
-
-//     // public getSelection(): Selection<IObjectWithKey> {
-//     //     const selection = useConst(() => {
-//     //         const s = new Selection();
-//     //         s.setItems(items, true);
-//     //         return s;
-//     //     });
-
-//     //     return selection;
-//     // }
-
-//     // public useSelection() {
-//     //     const selection = useConst(() => {
-//     //         const s = new Selection();
-//     //         s.setItems(items, true);
-//     //         return s;
-//     //     });
-
-//     //     return selection;
-//     // }
-
-
-
-
-
-//     // public render(): React.ReactElement<INestedSelectorProps> {
-//     public view: React.FunctionComponent = () => {
-//         const isCompactMode = true;
-
-//         // const selection = useConst(() => {
-//         //     const s = new Selection();
-//         //     s.setItems(items, true);
-//         //     return s;
-//         // });
-//         // let selection: ISelection<IObjectWithKey>; // = new ISelection<IObjectWithKey>;
-//         const selection = useSelection();
-
-//         const onRenderCell = (nestingDepth?: number, item?: IExampleItem, itemIndex?: number): React.ReactNode => {
-//             return item && typeof itemIndex === 'number' && itemIndex > -1 ? (
-//                 <DetailsRow
-//                     columns={columns}
-//                     groupNestingDepth={nestingDepth}
-//                     item={item}
-//                     itemIndex={itemIndex}
-//                     selection={selection}
-//                     selectionMode={SelectionMode.multiple}
-//                     compact={isCompactMode}
-//                 />
-//             ) : null;
-//         };
-
-//         return (
-//             <div>
-//                 <SelectionZone selection={selection} selectionMode={SelectionMode.multiple}>
-//                     <GroupedList
-//                         items={items}
-//                         // eslint-disable-next-line react/jsx-no-bind
-//                         onRenderCell={onRenderCell}
-//                         selection={selection}
-//                         selectionMode={SelectionMode.multiple}
-//                         groups={groups}
-//                         compact={isCompactMode}
-//                     />
-//                 </SelectionZone>
-//             </div>
-//         );
-//     }
-// }
-// // export const NestedSelector = React.memo(function NestedSelectApp({
-// //     context
-// // }: INestedSelectorProps): JSX.Element {
-// //     const isCompactMode = true;
-
-// //     const selection = useConst(() => {
-// //         const s = new Selection();
-// //         s.setItems(items, true);
-// //         return s;
-// //     });
-
-// //     console.log(items);
-// //     console.log(columns);
-// //     console.log(selection);
-
-// //     const onRenderCell = (nestingDepth?: number, item?: IExampleItem, itemIndex?: number): React.ReactNode => {
-// //         return item && typeof itemIndex === 'number' && itemIndex > -1 ? (
-// //             <DetailsRow
-// //                 columns={columns}
-// //                 groupNestingDepth={nestingDepth}
-// //                 item={item}
-// //                 itemIndex={itemIndex}
-// //                 selection={selection}
-// //                 selectionMode={SelectionMode.multiple}
-// //                 compact={isCompactMode}
-// //             />
-// //         ) : null;
-// //     };
-
-// //     return (
-// //         <div>
-// //             <SelectionZone selection={selection} selectionMode={SelectionMode.multiple}>
-// //                 <GroupedList
-// //                     items={items}
-// //                     // eslint-disable-next-line react/jsx-no-bind
-// //                     onRenderCell={onRenderCell}
-// //                     selection={selection}
-// //                     selectionMode={SelectionMode.multiple}
-// //                     groups={groups}
-// //                     compact={isCompactMode}
-// //                 />
-// //             </SelectionZone>
-// //         </div>
-// //     );
-// // }
-// // );
+// );
