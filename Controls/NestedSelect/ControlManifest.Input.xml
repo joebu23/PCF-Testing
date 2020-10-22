@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <manifest>
-  <control namespace="Scoular.PCF" constructor="NestedSelect" version="0.0.77" display-name-key="NestedSelect" description-key="NestedSelect description" control-type="standard">
+  <control namespace="Scoular.PCF" constructor="NestedSelect" version="0.0.81" display-name-key="NestedSelect" description-key="NestedSelect description" control-type="standard">
     <!-- property node identifies a specific, configurable piece of data that the control expects from CDS -->
     <!-- <property name="sampleProperty" display-name-key="Property_Display_Key" description-key="Property_Desc_Key" of-type="SingleLine.Text" usage="bound" required="true" /> -->
     <data-set name="dataset" display-name-key="Dataset" />

@@ -21,9 +21,9 @@ function NestedSelector2({context, allBaseItems, selectedFilter}: INestedSelecto
 
   const useStyles = makeStyles({
     root: {
-      height: 216,
+      // height: 216,
       flexGrow: 1,
-      maxWidth: 400,
+      // maxWidth: 400,
     },
   });
 
@@ -45,8 +45,25 @@ function NestedSelector2({context, allBaseItems, selectedFilter}: INestedSelecto
 
   const [filteredItems, setFilteredItems] = React.useState(allItems);
   React.useEffect(() => {
-    setFilteredItems(allItems.filter(ai => ai.data.av_name === selectedFilter)[0]);
+    setFilteredItems(allItems.filter(ai => ai.data.av_name === selectedFilter)[0].children);
   }, [selectedFilter])
+
+  const getTreeItemsFromData = (treeItems: any[]) => {
+    return treeItems.map(treeItemData => {
+      let children = undefined;
+      if (treeItemData.children && treeItemData.children.length > 0) {
+        children = getTreeItemsFromData(treeItemData.children);
+      }
+      return (
+        <TreeItem
+          key={treeItemData.data.av_companytypeid}
+          nodeId={treeItemData.data.av_companytypeid}
+          label={treeItemData.data.av_name}
+          children={children}
+        />
+      );
+    });
+  };
 
   const classes = useStyles();
 
@@ -61,9 +78,11 @@ function NestedSelector2({context, allBaseItems, selectedFilter}: INestedSelecto
         defaultExpandIcon={<ChevronRightIcon />}
         expanded={expanded}
         selected={selected}
+        multiSelect
         onNodeToggle={handleToggle}
         onNodeSelect={handleSelect}
       >
+        {getTreeItemsFromData(filteredItems)}
         <TreeItem nodeId="1" label="Applications">
           <TreeItem nodeId="2" label="Calendar" />
           <TreeItem nodeId="3" label="Chrome" />
