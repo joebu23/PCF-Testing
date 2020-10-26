@@ -23,6 +23,7 @@ export class NestedSelect implements ComponentFramework.StandardControl<IInputs,
 	private selectedItems: string[] = [];
 	private _allItemsNested: any[];
 	private _allItemsFlat: any[];
+	private _clientUrl: string;
 	// private filteredItems: any[];
 
 	private _entityMetadataSuccessCallback: any;
@@ -44,8 +45,9 @@ export class NestedSelect implements ComponentFramework.StandardControl<IInputs,
 				allBaseItemsNested: this._allItemsNested,
 				allBaseItemsFlat: this._allItemsFlat,
 				selectedFilter: this._contextObj.parameters.filterField.formatted || "",
-				selectedItems: this.selectedItems
-			}
+				selectedItems: this.selectedItems,
+				clientUrl: this._clientUrl
+			};
 			
 			const element: React.ReactElement = React.createElement(NestedSelector2, props);
 			ReactDom.render(element, this._container);
@@ -65,6 +67,7 @@ export class NestedSelect implements ComponentFramework.StandardControl<IInputs,
 	public init(context: ComponentFramework.Context<IInputs>, notifyOutputChanged: () => void, state: ComponentFramework.Dictionary, container: HTMLDivElement) {
 		this._container = container;
 		this._contextObj = context;
+		this._clientUrl = (<any>Xrm).Utility.getGlobalContext().getClientUrl();
 
 		this._notifyOutputChanged = notifyOutputChanged;
 
@@ -120,13 +123,6 @@ export class NestedSelect implements ComponentFramework.StandardControl<IInputs,
 	}
 
 	public addOptions(value: any) {
-		// for (const i in value.entities) {
-		// 	const current: any = value.entities[i];
-		// 	const checked = this.selectedItems.indexOf(<string>current["av_companytypeid"]) > -1;
-
-		// 	current["selected"] = checked;
-		// }
-
 		this._allItemsFlat = value.entities;
 		this._allItemsNested = arrayToTree(value.entities, {
 			id: 'av_companytypeid',
