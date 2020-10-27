@@ -2,12 +2,8 @@ import { IInputs, IOutputs } from "./generated/ManifestTypes";
 import DataSetInterfaces = ComponentFramework.PropertyHelper.DataSetApi;
 import * as React from "react";
 import * as ReactDom from "react-dom";
-import NestedSelector2, { INestedSelectorProps } from "./NestedSelector";
+import NestedSelector, { INestedSelectorProps } from "./NestedSelector";
 import { arrayToTree } from 'performant-array-to-tree';
-// type DataSet = ComponentFramework.PropertyTypes.DataSet;
-
-// type OptionSet = ComponentFramework.PropertyTypes.OptionSetProperty;
-// type OptionMetadata = ComponentFramework.PropertyHelper.OptionMetadata;
 
 declare var Xrm: any;
 
@@ -20,7 +16,7 @@ export class NestedSelect implements ComponentFramework.StandardControl<IInputs,
 
 	// Div element created as part of this control's main container
 	private errorElement: HTMLDivElement;
-	private selectedItems: string[] = [];
+	private _selectedItems: string[] = [];
 	private _allItemsNested: any[];
 	private _allItemsFlat: any[];
 	private _clientUrl: string;
@@ -30,6 +26,13 @@ export class NestedSelect implements ComponentFramework.StandardControl<IInputs,
 	private _linkedEntityMetadataSuccessCallback: any;
 	private _relationshipSuccessCallback: any;
 	private _successCallback: any;
+
+	private _mainEntity: string;
+    private _relatedEntity: string;
+    private _relationshipEntity: string;
+    private _relatedFieldId: string;
+    private _relatedParentIdField: string;
+    private _relatedFieldName: string;
 
 	/**
 	 * Empty constructor.
@@ -45,11 +48,17 @@ export class NestedSelect implements ComponentFramework.StandardControl<IInputs,
 				allBaseItemsNested: this._allItemsNested,
 				allBaseItemsFlat: this._allItemsFlat,
 				selectedFilter: this._contextObj.parameters.filterField.formatted || "",
-				selectedItems: this.selectedItems,
-				clientUrl: this._clientUrl
+				selectedItems: this._selectedItems,
+				clientUrl: this._clientUrl,
+				mainEntityName: this._mainEntity,
+				relatedEntityName: this._relatedEntity,
+				relationshipName: this._relationshipEntity,
+				relatedEntityIdFieldName: this._relatedFieldId,
+				relatedEntityNameFieldName: this._relatedFieldName,
+				relatedEntityParentFieldName: this._relatedParentIdField
 			};
 			
-			const element: React.ReactElement = React.createElement(NestedSelector2, props);
+			const element: React.ReactElement = React.createElement(NestedSelector, props);
 			ReactDom.render(element, this._container);
 		} else {
 			console.log("Have no data");
@@ -65,6 +74,13 @@ export class NestedSelect implements ComponentFramework.StandardControl<IInputs,
 	 * @param container If a control is marked control-type='standard', it will receive an empty div element within which it can render its content.
 	 */
 	public init(context: ComponentFramework.Context<IInputs>, notifyOutputChanged: () => void, state: ComponentFramework.Dictionary, container: HTMLDivElement) {
+		this._mainEntity = context.parameters.mainEntity.raw!;
+		this._relatedEntity = context.parameters.relatedEntity.raw!;
+		this._relationshipEntity = context.parameters.relationshipEntity.raw!;
+		this._relatedFieldId = context.parameters.relatedFieldId.raw!;
+		this._relatedParentIdField = context.parameters.relatedParentIdField.raw!;
+		this._relatedFieldName = context.parameters.relatedFieldName.raw!;
+
 		this._container = container;
 		this._contextObj = context;
 		this._clientUrl = (<any>Xrm).Utility.getGlobalContext().getClientUrl();
@@ -83,11 +99,11 @@ export class NestedSelect implements ComponentFramework.StandardControl<IInputs,
 			this._successCallback = this.successCallback.bind(this);
 
 			(<any>Xrm).Utility.getEntityMetadata((<any>this._contextObj).page.entityTypeName, []).then(this._entityMetadataSuccessCallback, this.errorCallback);
-			(<any>Xrm).Utility.getEntityMetadata("av_companytype", []).then(this._linkedEntityMetadataSuccessCallback, this.errorCallback);
+			(<any>Xrm).Utility.getEntityMetadata(this._relatedEntity, []).then(this._linkedEntityMetadataSuccessCallback, this.errorCallback);
 
 			if ((<any>this._contextObj).page.entityId != null
 				&& (<any>this._contextObj).page.entityId != "00000000-0000-0000-0000-000000000000") {
-				this._contextObj.webAPI.retrieveMultipleRecords("av_account_av_companytype", "?$filter=" + (<any>this._contextObj).page.entityTypeName + "id eq " + (<any>this._contextObj).page.entityId, 5000).then(this._relationshipSuccessCallback, this.errorCallback);
+				this._contextObj.webAPI.retrieveMultipleRecords(this._relationshipEntity, "?$filter=" + (<any>this._contextObj).page.entityTypeName + "id eq " + (<any>this._contextObj).page.entityId, 5000).then(this._relationshipSuccessCallback, this.errorCallback);
 			}
 			else {
 				this.relationshipSuccessCallback(null);
@@ -95,14 +111,11 @@ export class NestedSelect implements ComponentFramework.StandardControl<IInputs,
 		}
 	}
 
-
 	/**
 	 * Called when any value in the property bag has changed. This includes field values, data-sets, global values such as container height and width, offline status, control metadata values such as label, visible, etc.
 	 * @param context The entire property bag available to control via Context Object; It contains values as set up by the customizer mapped to names defined in the manifest, as well as utility functions
 	 */
 	public updateView(context: ComponentFramework.Context<IInputs>): void {
-		console.log(context.updatedProperties);
-		console.log('view change');
 		this.renderGrid();
 	}
 
@@ -125,8 +138,8 @@ export class NestedSelect implements ComponentFramework.StandardControl<IInputs,
 	public addOptions(value: any) {
 		this._allItemsFlat = value.entities;
 		this._allItemsNested = arrayToTree(value.entities, {
-			id: 'av_companytypeid',
-			parentId: '_av_parent_value',
+			id: this._relatedFieldId, //'av_companytypeid',
+			parentId: this._relatedParentIdField, //'_av_parent_value',
 			childrenField: 'children',
 		});
 
@@ -141,11 +154,11 @@ export class NestedSelect implements ComponentFramework.StandardControl<IInputs,
 	public relationshipSuccessCallback(value: any): void | PromiseLike<void> {
 		if (value != null) {
 			for (const i in value.entities) {
-				this.selectedItems.push(value.entities[i]["av_companytypeid"]);
+				this._selectedItems.push(value.entities[i][this._relatedFieldId]);
 			}
 		}
 
-		this._contextObj.webAPI.retrieveMultipleRecords("av_companytype", "?$orderby=" + "av_name" + " asc", 5000).then(this._successCallback, this.errorCallback);
+		this._contextObj.webAPI.retrieveMultipleRecords(this._relatedEntity, "?$orderby=" + this._relatedFieldName + " asc", 5000).then(this._successCallback, this.errorCallback);
 	}
 
 	public errorCallback(value: any) {

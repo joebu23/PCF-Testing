@@ -5,10 +5,7 @@ import TreeView from '@material-ui/lab/TreeView';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import ChevronRightIcon from '@material-ui/icons/ChevronRight';
 import TreeItem from '@material-ui/lab/TreeItem';
-import { Checkbox, FormControlLabel, Typography } from '@material-ui/core';
-import { unstable_renderSubtreeIntoContainer } from 'react-dom';
-import { ChildFriendlyOutlined } from '@material-ui/icons';
-import { AnyRecord } from 'dns';
+import { Checkbox, Typography } from '@material-ui/core';
 
 export interface INestedSelectorProps {
   context: ComponentFramework.Context<IInputs>;
@@ -17,17 +14,28 @@ export interface INestedSelectorProps {
   selectedFilter: string;
   selectedItems: string[];
   clientUrl: string;
+  mainEntityName: string;
+  relatedEntityName: string;
+  relationshipName: string;
+  relatedEntityIdFieldName: string;
+  relatedEntityNameFieldName: string;
+  relatedEntityParentFieldName: string;
 }
 
-// let _context: ComponentFramework.Context<IInputs>;
-// let _allItems: any[];
-// let _clientUrl: string;
-
-function NestedSelector2({ context, allBaseItemsNested, allBaseItemsFlat, selectedFilter, selectedItems, clientUrl }: INestedSelectorProps) {
-  // _context = context;
-  // _allItems = allBaseItemsNested;
-  // _clientUrl = clientUrl;
-
+function NestedSelector({
+  context,
+  allBaseItemsNested,
+  allBaseItemsFlat,
+  selectedFilter,
+  selectedItems,
+  clientUrl,
+  mainEntityName,
+  relatedEntityName,
+  relationshipName,
+  relatedEntityIdFieldName,
+  relatedEntityNameFieldName,
+  relatedEntityParentFieldName
+}: INestedSelectorProps) {
   const useStyles = makeStyles({
     root: {
       flexGrow: 1
@@ -38,52 +46,40 @@ function NestedSelector2({ context, allBaseItemsNested, allBaseItemsFlat, select
     }
   });
 
-  // const [expanded, setExpanded] = React.useState<string[]>([]);
   const [selected, setSelected] = React.useState<string[]>([]);
 
-  // const handleToggle = (event: React.ChangeEvent<{}>, nodeIds: string[]) => {
-  //   console.log("Toggle changed");
-  //   console.log(nodeIds);
-  //   setExpanded(nodeIds);
-  // };
-
   const handleSelect = (event: React.ChangeEvent<{}>, nodeIds: string[]) => {
-    console.log("Select changed");
-    console.log(nodeIds);
     setSelected(nodeIds);
   };
 
   const [allItems, setAllItems] = React.useState(allBaseItemsNested);
   React.useEffect(() => {
-    console.log("set all items changed");
     setAllItems(allBaseItemsNested);
 
   }, [allBaseItemsNested]);
 
   const [filteredItems, setFilteredItems] = React.useState(allItems);
   React.useEffect(() => {
-    console.log("set filtered items changed");
-    setFilteredItems(allItems.filter(ai => ai.data.av_name === selectedFilter)[0].children);
+    setFilteredItems(allItems.filter(ai => ai.data[relatedEntityNameFieldName] === selectedFilter)[0].children);
 
     setSelected(selectedItems);
     let itemsToExpand: string[] = [];
 
-    // expand the tree so you can see everyone's pretty face
     selectedItems.forEach((item) => {
       let parentThere: boolean = true;
       let idToFind: string = item;
       while (parentThere == true) {
-        const childObject = allBaseItemsFlat.filter(fi => fi.av_companytypeid === idToFind)[0];
+        const childObject = allBaseItemsFlat.filter(fi => fi[relatedEntityIdFieldName] === idToFind)[0];
 
         if (childObject) {
-          const parentObject = allBaseItemsFlat.filter(po => po.av_companytypeid === childObject._av_parent_value)[0];
+          const parentObject = allBaseItemsFlat.filter(po => po[relatedEntityIdFieldName] === childObject[relatedEntityParentFieldName])[0];
 
           if (parentObject) {
-            if (selectedItems.indexOf(parentObject.av_companytypeid) == -1) {
-              itemsToExpand.push(parentObject.av_companytypeid);
+            if (selectedItems.indexOf(parentObject[relatedEntityIdFieldName]) == -1) {
+              itemsToExpand.push(parentObject[relatedEntityIdFieldName]);
             }
 
-            idToFind = parentObject.av_companytypeid;
+            idToFind = parentObject[relatedEntityIdFieldName];
           } else {
             parentThere = false;
           }
@@ -92,23 +88,66 @@ function NestedSelector2({ context, allBaseItemsNested, allBaseItemsFlat, select
         }
       }
     });
-
-    // setExpanded(itemsToExpand);
-
   }, [selectedFilter])
 
   function getOnChange(checked: boolean, id: string) {
-    console.log("getonchange 'cause you clicked it");
     let array = checked
       ? [...selected, id]
       : selected.filter(ai => ai !== id);
 
     setSelected(array);
+
+    const recordUrl: string = clientUrl + "/api/data/v9.1/" + mainEntityName + "s(" + (context as any).page.entityId + ")";
+
+    if (checked) {
+      var associate = {
+        "@odata.id": recordUrl
+      };
+
+      // add the item to the relationships
+      let req = new XMLHttpRequest();
+      req.open("POST", clientUrl + "/api/data/v9.1/" + relatedEntityName + "s(" + id + ")/" + relationshipName + "/$ref", true);
+      req.setRequestHeader("Accept", "application/json");
+      req.setRequestHeader("Content-Type", "application/json; charset=utf-8");
+      req.setRequestHeader("OData-MaxVersion", "4.0");
+      req.setRequestHeader("OData-Version", "4.0");
+      req.onreadystatechange = function () {
+        if (this.readyState == 4 /* complete */) {
+          req.onreadystatechange = null;
+          if (this.status == 204) {
+            //alert('Record Associated');
+          } else {
+            var error = JSON.parse(this.response).error;
+            console.log(this.response);
+            alert(error.message);
+          }
+        }
+      };
+      req.send(JSON.stringify(associate));
+    } else {
+      // remove the item from the relationships
+      var req = new XMLHttpRequest();
+      req.open("DELETE", clientUrl + "/api/data/v9.1/" + relatedEntityName + "s(" + id + ")/" + relationshipName + "/$ref" + "?$id=" + recordUrl, true);
+      req.setRequestHeader("Accept", "application/json");
+      req.setRequestHeader("Content-Type", "application/json; charset=utf-8");
+      req.setRequestHeader("OData-MaxVersion", "4.0");
+      req.setRequestHeader("OData-Version", "4.0");
+      req.onreadystatechange = function () {
+        if (this.readyState == 4 /* complete */) {
+          req.onreadystatechange = null;
+          if (this.status == 204) {
+            //alert('Record Disassociated');
+          } else {
+            var error = JSON.parse(this.response).error;
+            alert(error.message);
+          }
+        }
+      };
+      req.send();
+    }
   }
 
   const getTreeItemsFromData = (treeItems: any[]) => {
-    console.log("tree render");
-    console.log(selected)
     return treeItems.map(treeItemData => {
       let children = undefined;
       if (treeItemData.children && treeItemData.children.length > 0) {
@@ -116,19 +155,19 @@ function NestedSelector2({ context, allBaseItemsNested, allBaseItemsFlat, select
       }
       return (
         <TreeItem
-          key={treeItemData.data.av_companytypeid}
-          nodeId={treeItemData.data.av_companytypeid}
+          key={treeItemData.data[relatedEntityIdFieldName]}
+          nodeId={treeItemData.data[relatedEntityIdFieldName]}
           label={(
-            <div style={{ display: 'flex', alignItems: 'center' }} className={(treeItemData.children.filter((el: { data: { av_companytypeid: string; }; }) => selected.includes(el.data.av_companytypeid))).length > 0 ? 'should' : 'shouldnot'}>
+            <div style={{ display: 'flex', alignItems: 'center' }} className={(treeItemData.children.filter((el: { data: { [x: string]: string; }; }) => selected.includes(el.data[relatedEntityIdFieldName]))).length > 0 ? 'parent' : 'noparent'}>
               <Checkbox
-                id={`checkbox-${treeItemData.data.av_companytypeid}`}
+                id={`checkbox-${treeItemData.data[relatedEntityIdFieldName]}`}
                 className={classes.globalFilterCheckbox}
-                checked={selected.indexOf(treeItemData.data.av_companytypeid) > -1}//selected.some((item) => item === treeItemData.data.av_companytypeid)}
-                onChange={(event) => getOnChange(event.currentTarget.checked, treeItemData.data.av_companytypeid)}
+                checked={selected.indexOf(treeItemData.data[relatedEntityIdFieldName]) > -1}
+                onChange={(event) => getOnChange(event.currentTarget.checked, treeItemData.data[relatedEntityIdFieldName])}
                 onClick={e => e.stopPropagation()}
                 color="primary"
               />
-              <Typography variant="inherit">{treeItemData.data.av_name}</Typography>
+              <Typography variant="inherit">{treeItemData.data[relatedEntityNameFieldName]}</Typography>
             </div>
           )}
           children={children}
@@ -139,21 +178,14 @@ function NestedSelector2({ context, allBaseItemsNested, allBaseItemsFlat, select
 
   const classes = useStyles();
 
-  console.log(allItems);
-  console.log(filteredItems);
-
   return (
     <div>
       <TreeView
         className={classes.root}
         defaultCollapseIcon={<ExpandMoreIcon />}
         defaultExpandIcon={<ChevronRightIcon />}
-        // expanded={expanded}
-        // defaultExpanded={selected}
         selected={selected}
         multiSelect
-        // onNodeToggle={handleToggle}
-        // onNodeSelect={handleSelect}
       >
         {getTreeItemsFromData(filteredItems)}
       </TreeView>
@@ -161,90 +193,4 @@ function NestedSelector2({ context, allBaseItemsNested, allBaseItemsFlat, select
   );
 }
 
-export default NestedSelector2;
-
-
-// const checkBoxClicked = (event: any, checked: any, id: any) => {
-  //   console.log("Click Change");
-  //   console.log(event);
-  //   console.log(checked);
-  //   console.log(id);
-
-  //   // const url: string = (Xrm as any).Utility.getGlobalContext().getClientUrl();
-  //   // const recordUrl: string = _clientUrl + "/api/data/v9.1/" + "account" + "(" + (_context as any).page.entityId + ")";
-
-  //   if (selected.indexOf(id) > -1) { // the item is there so we will remove it
-  //     selected.slice(selected.indexOf(id), 1);
-  //     setSelected(selected);
-  //     // _context.webAPI.deleteRecord("av_account_av_companytype", id)
-
-  //     // var disassociateRequest = {
-  //     //   getMetadata: () => ({
-  //     //     boundParameter: null,
-  //     //     parameterTypes: {},
-  //     //     operationType: 2,
-  //     //     operationName: "Disassociate"
-  //     //   }),
-
-  //     //   relationship: "av_account_av_companytype",
-
-  //     //   target: {
-  //     //     entityType: "account",
-  //     //     id: (_context as any).page.entityId
-  //     //   },
-
-  //     //   relatedEntityId: id
-  //     // };
-
-  //     // (context as any).webAPI.execute(disassociateRequest).then((result: any) => {
-  //     //   console.log(result);
-  //     //   setExpanded(selected);
-  //     // });
-  //   } else { // the item ISN'T there so we will add it.....fancy!!!!
-  //     selected.push(id);
-  //     setSelected(selected);
-
-  //     // let req = new XMLHttpRequest();
-  //     // req.open("POST", _clientUrl + "/api/data/v9.1/" + "av_companytypes" + "(" + id + ")/" + "av_account_av_companytype" + "/$ref", true);
-  //     // req.setRequestHeader("Accept", "application/json");
-  //     // req.setRequestHeader("Content-Type", "application/json; charset=utf-8");
-  //     // req.setRequestHeader("OData-MaxVersion", "4.0");
-  //     // req.setRequestHeader("OData-Version", "4.0");
-  //     // req.onreadystatechange = function () {
-  //     //   if (this.readyState == 4 /* complete */) {
-  //     //     req.onreadystatechange = null;
-  //     //     if (this.status == 204) {
-  //     //       //alert('Record Associated');
-  //     //     } else {
-  //     //       var error = JSON.parse(this.response).error;
-  //     //       console.log(this.response);
-  //     //       alert(error.message);
-  //     //     }
-  //     //   }
-  //     // };
-  //     // req.send(JSON.stringify(recordUrl));
-
-  //     // var associateRequest = {
-  //     //   getMetadata: () => ({
-  //     //     boundParameter: null,
-  //     //     parameterTypes: {},
-  //     //     operationType: 2,
-  //     //     operationName: "Associate"
-  //     //   }),
-
-  //     //   relationship: "av_account_av_companytype",
-
-  //     //   target: {
-  //     //     entityType: "account",
-  //     //     id: (_context as any).page.entityId
-  //     //   },
-
-  //     //   relatedEntityId: id
-  //     // };
-
-  //     // (context as any).webAPI.execute(associateRequest).then((result: any) => {
-  //     //   console.log(result);
-  //     //   setExpanded(selected);
-  //     // });
-  //   }
-  // };
+export default NestedSelector;

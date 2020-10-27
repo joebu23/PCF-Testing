@@ -1,0 +1,8 @@
+.Scoular\.PCF\.NestedSelect .parent .MuiIconButton-label  {
+    border: 2px #3f51b5 solid;
+    margin-left: -2px;
+}
+
+.Scoular\.PCF\.NestedSelect .parent .MuiTypography-root {
+    margin-left: -2px;
+}
