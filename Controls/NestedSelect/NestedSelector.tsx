@@ -47,7 +47,6 @@ function NestedSelector({
   });
 
   const [selected, setSelected] = React.useState<string[]>([]);
-
   const handleSelect = (event: React.ChangeEvent<{}>, nodeIds: string[]) => {
     setSelected(nodeIds);
   };
@@ -89,6 +88,38 @@ function NestedSelector({
       }
     });
   }, [selectedFilter])
+
+  const [markedAncestors, setAncestors] = React.useState(selected);
+  React.useEffect(() => {
+    let itemsToExpand: string[] = [];
+
+    // expand the tree so you can see everyone's pretty face
+    selected.forEach((item) => {
+      let parentThere: boolean = true;
+      let idToFind: string = item;
+      while(parentThere == true) {
+        const childObject = allBaseItemsFlat.filter(fi => fi.av_companytypeid === idToFind)[0];
+
+        if (childObject) {
+          const parentObject = allBaseItemsFlat.filter(po => po.av_companytypeid === childObject._av_parent_value)[0];
+
+          if (parentObject) {
+            if (selectedItems.indexOf(parentObject.av_companytypeid) == -1) {
+              itemsToExpand.push(parentObject.av_companytypeid);
+            }
+
+            idToFind = parentObject.av_companytypeid;
+          } else {
+            parentThere = false;
+          }
+        } else {
+          parentThere = false;
+        }
+      }
+    });
+
+    setAncestors(itemsToExpand);
+  }, [selected])
 
   function getOnChange(checked: boolean, id: string) {
     let array = checked
@@ -158,7 +189,7 @@ function NestedSelector({
           key={treeItemData.data[relatedEntityIdFieldName]}
           nodeId={treeItemData.data[relatedEntityIdFieldName]}
           label={(
-            <div style={{ display: 'flex', alignItems: 'center' }} className={(treeItemData.children.filter((el: { data: { [x: string]: string; }; }) => selected.includes(el.data[relatedEntityIdFieldName]))).length > 0 ? 'parent' : 'noparent'}>
+            <div style={{ display: 'flex', alignItems: 'center' }} className={markedAncestors.indexOf(treeItemData.data[relatedEntityIdFieldName]) > -1 ? 'parent' : 'noparent'}>
               <Checkbox
                 id={`checkbox-${treeItemData.data[relatedEntityIdFieldName]}`}
                 className={classes.globalFilterCheckbox}
