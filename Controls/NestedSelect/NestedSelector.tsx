@@ -54,39 +54,12 @@ function NestedSelector({
   const [allItems, setAllItems] = React.useState(allBaseItemsNested);
   React.useEffect(() => {
     setAllItems(allBaseItemsNested);
-
   }, [allBaseItemsNested]);
 
   const [filteredItems, setFilteredItems] = React.useState(allItems);
   React.useEffect(() => {
     setFilteredItems(allItems.filter(ai => ai.data[relatedEntityNameFieldName] === selectedFilter)[0].children);
-
     setSelected(selectedItems);
-    let itemsToExpand: string[] = [];
-
-    selectedItems.forEach((item) => {
-      let parentThere: boolean = true;
-      let idToFind: string = item;
-      while (parentThere == true) {
-        const childObject = allBaseItemsFlat.filter(fi => fi[relatedEntityIdFieldName] === idToFind)[0];
-
-        if (childObject) {
-          const parentObject = allBaseItemsFlat.filter(po => po[relatedEntityIdFieldName] === childObject[relatedEntityParentFieldName])[0];
-
-          if (parentObject) {
-            if (selectedItems.indexOf(parentObject[relatedEntityIdFieldName]) == -1) {
-              itemsToExpand.push(parentObject[relatedEntityIdFieldName]);
-            }
-
-            idToFind = parentObject[relatedEntityIdFieldName];
-          } else {
-            parentThere = false;
-          }
-        } else {
-          parentThere = false;
-        }
-      }
-    });
   }, [selectedFilter])
 
   const [markedAncestors, setAncestors] = React.useState(selected);
@@ -98,17 +71,17 @@ function NestedSelector({
       let parentThere: boolean = true;
       let idToFind: string = item;
       while(parentThere == true) {
-        const childObject = allBaseItemsFlat.filter(fi => fi.av_companytypeid === idToFind)[0];
+        const currentObject = allBaseItemsFlat.filter(fi => fi[relatedEntityIdFieldName] === idToFind)[0];
 
-        if (childObject) {
-          const parentObject = allBaseItemsFlat.filter(po => po.av_companytypeid === childObject._av_parent_value)[0];
+        if (currentObject) {
+          const parentObject = allBaseItemsFlat.filter(po => po[relatedEntityIdFieldName] === currentObject[relatedEntityParentFieldName])[0];
 
           if (parentObject) {
-            if (selectedItems.indexOf(parentObject.av_companytypeid) == -1) {
-              itemsToExpand.push(parentObject.av_companytypeid);
+            if (itemsToExpand.indexOf(parentObject[relatedEntityIdFieldName]) == -1) {
+              itemsToExpand.push(parentObject[relatedEntityIdFieldName]);
             }
 
-            idToFind = parentObject.av_companytypeid;
+            idToFind = parentObject[relatedEntityIdFieldName];
           } else {
             parentThere = false;
           }
@@ -184,6 +157,7 @@ function NestedSelector({
       if (treeItemData.children && treeItemData.children.length > 0) {
         children = getTreeItemsFromData(treeItemData.children);
       }
+
       return (
         <TreeItem
           key={treeItemData.data[relatedEntityIdFieldName]}
