@@ -1,5 +1,4 @@
 import { IInputs, IOutputs } from "./generated/ManifestTypes";
-import DataSetInterfaces = ComponentFramework.PropertyHelper.DataSetApi;
 import * as React from "react";
 import * as ReactDom from "react-dom";
 import NestedSelector, { INestedSelectorProps } from "./NestedSelector";
@@ -138,8 +137,8 @@ export class NestedSelect implements ComponentFramework.StandardControl<IInputs,
 	public addOptions(value: any) {
 		this._allItemsFlat = value.entities;
 		this._allItemsNested = arrayToTree(value.entities, {
-			id: this._relatedFieldId, //'av_companytypeid',
-			parentId: this._relatedParentIdField, //'_av_parent_value',
+			id: this._relatedFieldId,
+			parentId: this._relatedParentIdField,
 			childrenField: 'children',
 		});
 

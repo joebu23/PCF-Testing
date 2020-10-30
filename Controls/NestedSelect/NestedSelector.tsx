@@ -65,16 +65,24 @@ function NestedSelector({
   const [markedAncestors, setAncestors] = React.useState(selected);
   React.useEffect(() => {
     let itemsToExpand: string[] = [];
+    let breadcrumbItems: string[] = [];
 
     // expand the tree so you can see everyone's pretty face
     selected.forEach((item) => {
       let parentThere: boolean = true;
       let idToFind: string = item;
-      while(parentThere == true) {
+      let newBreadcrumb: string = "";
+
+      while (parentThere == true) {
         const currentObject = allBaseItemsFlat.filter(fi => fi[relatedEntityIdFieldName] === idToFind)[0];
 
         if (currentObject) {
           const parentObject = allBaseItemsFlat.filter(po => po[relatedEntityIdFieldName] === currentObject[relatedEntityParentFieldName])[0];
+
+          // don't add the top two level names to the breadcrumb
+          if (currentObject[relatedEntityNameFieldName] != selectedFilter && parentObject && parentObject[relatedEntityNameFieldName] != selectedFilter) {
+            newBreadcrumb = " / " + currentObject[relatedEntityNameFieldName] + newBreadcrumb
+          }
 
           if (parentObject) {
             if (itemsToExpand.indexOf(parentObject[relatedEntityIdFieldName]) == -1) {
@@ -84,6 +92,10 @@ function NestedSelector({
             idToFind = parentObject[relatedEntityIdFieldName];
           } else {
             parentThere = false;
+
+            if (newBreadcrumb != "") {
+              breadcrumbItems.push(newBreadcrumb.substr(3));
+            }
           }
         } else {
           parentThere = false;
@@ -92,7 +104,10 @@ function NestedSelector({
     });
 
     setAncestors(itemsToExpand);
+    setBreadcrumb(breadcrumbItems.sort());
   }, [selected])
+
+  const [breadcrumb, setBreadcrumb] = React.useState<string[]>([]);
 
   function getOnChange(checked: boolean, id: string) {
     let array = checked
@@ -151,6 +166,22 @@ function NestedSelector({
     }
   }
 
+  const getTreeBreadcrumb = () => {
+    let childItems: any[] = [];
+    breadcrumb.forEach(function (bc) {
+      const rand = 1 + Math.random() * (1000 - 1);
+      childItems.push(<li key={bc + "-" + rand}><em>{bc}</em></li>);
+    });
+
+    return (
+      <div className="tree-breadcrumb">
+        <ul className="bc-item-list">
+          {childItems}
+        </ul>
+      </div>
+    )
+  };
+
   const getTreeItemsFromData = (treeItems: any[]) => {
     return treeItems.map(treeItemData => {
       let children = undefined;
@@ -192,6 +223,7 @@ function NestedSelector({
         selected={selected}
         multiSelect
       >
+        {getTreeBreadcrumb()}
         {getTreeItemsFromData(filteredItems)}
       </TreeView>
     </div>

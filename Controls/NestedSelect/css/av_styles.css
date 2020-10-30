@@ -6,3 +6,12 @@
 .Scoular\.PCF\.NestedSelect .parent .MuiTypography-root {
     margin-left: -2px;
 }
+
+.Scoular\.PCF\.NestedSelect .tree-breadcrumb {
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+.Scoular\.PCF\.NestedSelect .tree-breadcrumb .bc-item-list {
+    display: block;
+}
