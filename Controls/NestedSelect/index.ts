@@ -31,7 +31,8 @@ export class NestedSelect implements ComponentFramework.StandardControl<IInputs,
     private _relationshipEntity: string;
     private _relatedFieldId: string;
     private _relatedParentIdField: string;
-    private _relatedFieldName: string;
+	private _relatedFieldName: string;
+	private _inputFieldName: string;
 
 	/**
 	 * Empty constructor.
@@ -54,7 +55,8 @@ export class NestedSelect implements ComponentFramework.StandardControl<IInputs,
 				relationshipName: this._relationshipEntity,
 				relatedEntityIdFieldName: this._relatedFieldId,
 				relatedEntityNameFieldName: this._relatedFieldName,
-				relatedEntityParentFieldName: this._relatedParentIdField
+				relatedEntityParentFieldName: this._relatedParentIdField,
+				inputFieldName: this._inputFieldName
 			};
 			
 			const element: React.ReactElement = React.createElement(NestedSelector, props);
@@ -79,6 +81,7 @@ export class NestedSelect implements ComponentFramework.StandardControl<IInputs,
 		this._relatedFieldId = context.parameters.relatedFieldId.raw!;
 		this._relatedParentIdField = context.parameters.relatedParentIdField.raw!;
 		this._relatedFieldName = context.parameters.relatedFieldName.raw!;
+		this._inputFieldName = context.parameters.inputField.attributes!.LogicalName;
 
 		this._container = container;
 		this._contextObj = context;

@@ -20,6 +20,11 @@ export interface INestedSelectorProps {
   relatedEntityIdFieldName: string;
   relatedEntityNameFieldName: string;
   relatedEntityParentFieldName: string;
+  inputFieldName: string;
+}
+
+export interface INestedSelectorValues {
+  selectedItemsAsString: string;
 }
 
 function NestedSelector({
@@ -34,7 +39,8 @@ function NestedSelector({
   relationshipName,
   relatedEntityIdFieldName,
   relatedEntityNameFieldName,
-  relatedEntityParentFieldName
+  relatedEntityParentFieldName,
+  inputFieldName
 }: INestedSelectorProps) {
   const useStyles = makeStyles({
     root: {
@@ -79,9 +85,9 @@ function NestedSelector({
         if (currentObject) {
           const parentObject = allBaseItemsFlat.filter(po => po[relatedEntityIdFieldName] === currentObject[relatedEntityParentFieldName])[0];
 
-          // don't add the top two level names to the breadcrumb
-          if (currentObject[relatedEntityNameFieldName] != selectedFilter && parentObject && parentObject[relatedEntityNameFieldName] != selectedFilter) {
-            newBreadcrumb = " / " + currentObject[relatedEntityNameFieldName] + newBreadcrumb
+          // don't add the top level names to the breadcrumb
+          if (currentObject[relatedEntityNameFieldName] != selectedFilter) {
+            newBreadcrumb = " / " + currentObject[relatedEntityNameFieldName] + newBreadcrumb;
           }
 
           if (parentObject) {
@@ -118,6 +124,33 @@ function NestedSelector({
 
     const recordUrl: string = clientUrl + "/api/data/v9.1/" + mainEntityName + "s(" + (context as any).page.entityId + ")";
 
+    // build search string update request first, we'll send it on after we know the association has completed successfully
+    let newString: string = "";
+    array.forEach(item => {
+      newString += allBaseItemsFlat.filter(ai => ai[relatedEntityIdFieldName] === item)[0][relatedEntityNameFieldName] + " ; ";
+    });
+
+    let accountUpdate: any = {};
+    accountUpdate[inputFieldName] = newString;
+
+    var finalRequest = new XMLHttpRequest();
+    finalRequest.open("PATCH", recordUrl, true);
+    finalRequest.setRequestHeader("Accept", "application/json");
+    finalRequest.setRequestHeader("Content-Type", "application/json; charset=utf-8");
+    finalRequest.setRequestHeader("OData-MaxVersion", "4.0");
+    finalRequest.setRequestHeader("OData-Version", "4.0");
+    finalRequest.onreadystatechange = function () {
+      if (this.readyState == 4 /* complete */) {
+        finalRequest.onreadystatechange = null;
+        if (this.status == 204) { //OK {
+          // alert("Account is updated")
+        } else {
+          var error = JSON.parse(this.response).error;
+          alert(error.message);
+        }
+      }
+    }
+
     if (checked) {
       var associate = {
         "@odata.id": recordUrl
@@ -135,6 +168,7 @@ function NestedSelector({
           req.onreadystatechange = null;
           if (this.status == 204) {
             //alert('Record Associated');
+            finalRequest.send(JSON.stringify(accountUpdate));
           } else {
             var error = JSON.parse(this.response).error;
             console.log(this.response);
@@ -156,6 +190,7 @@ function NestedSelector({
           req.onreadystatechange = null;
           if (this.status == 204) {
             //alert('Record Disassociated');
+            finalRequest.send(JSON.stringify(accountUpdate));
           } else {
             var error = JSON.parse(this.response).error;
             alert(error.message);
@@ -164,7 +199,7 @@ function NestedSelector({
       };
       req.send();
     }
-  }
+  };
 
   const getTreeBreadcrumb = () => {
     let childItems: any[] = [];
