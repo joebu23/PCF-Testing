@@ -1,324 +1,268 @@
 import * as React from 'react';
-import { useEffect, useState } from 'react';
-import { GroupedList } from 'office-ui-fabric-react/lib/GroupedList';
-import { IColumn, DetailsRow, IObjectWithKey } from 'office-ui-fabric-react/lib/DetailsList';
-import { Selection, SelectionMode, SelectionZone } from 'office-ui-fabric-react/lib/Selection';
-import { Toggle, IToggleStyles } from 'office-ui-fabric-react/lib/Toggle';
-import { useBoolean, useConst } from '@uifabric/react-hooks';
-import { createListItems, createGroups, IExampleItem } from '@uifabric/example-data';
 import { IInputs } from './generated/ManifestTypes';
-import { ISelection } from '@fluentui/react';
+import { makeStyles } from '@material-ui/core/styles';
+import TreeView from '@material-ui/lab/TreeView';
+import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
+import ChevronRightIcon from '@material-ui/icons/ChevronRight';
+import TreeItem from '@material-ui/lab/TreeItem';
+import { Checkbox, Typography } from '@material-ui/core';
 
 export interface INestedSelectorProps {
-    context: ComponentFramework.Context<IInputs>;
+  context: ComponentFramework.Context<IInputs>;
+  allBaseItemsNested: any[];
+  allBaseItemsFlat: any[];
+  selectedFilter: string;
+  selectedItems: string[];
+  clientUrl: string;
+  mainEntityName: string;
+  relatedEntityName: string;
+  relationshipName: string;
+  relatedEntityIdFieldName: string;
+  relatedEntityNameFieldName: string;
+  relatedEntityParentFieldName: string;
+  inputFieldName: string;
 }
 
-const toggleStyles: Partial<IToggleStyles> = { root: { marginBottom: '20px' } };
+export interface INestedSelectorValues {
+  selectedItemsAsString: string;
+}
 
-const groupCount = 3;
-const groupDepth = 5;
-const items = createListItems(Math.pow(groupCount, groupDepth + 1));
-
-
-const columns = Object.keys(items[0])
-  .slice(0, 3)
-  .map(
-    (key: string): IColumn => ({
-      key: key,
-      name: key,
-      fieldName: key,
-      minWidth: 300,
-    }),
-  );
-
-const groups = createGroups(groupCount, groupDepth, 0, groupCount);
-
-export const NestedSelector = React.memo(function NestedSelectApp({
-    context
-} : INestedSelectorProps) : JSX.Element {
-    console.log(context);
-      const [isCompactMode, { toggle: toggleIsCompactMode }] = useBoolean(false);
-        const selection = useConst(() => {
-        const s = new Selection();
-            s.setItems(items, true);
-            return s;
-        });
-
-        const onRenderCell = (nestingDepth?: number, item?: IExampleItem, itemIndex?: number): React.ReactNode => {
-            return item && typeof itemIndex === 'number' && itemIndex > -1 ? (
-                <DetailsRow
-                    columns={columns}
-                    groupNestingDepth={nestingDepth}
-                    item={item}
-                    itemIndex={itemIndex}
-                    selection={selection}
-                    selectionMode={SelectionMode.multiple}
-                    compact={isCompactMode}
-                />
-            ) : null;
-        };
-
-        console.log(selection);
-
-        return (
-            <div>
-                <Toggle
-                    label="Enable compact mode"
-                    checked={isCompactMode}
-                    onChange={toggleIsCompactMode}
-                    onText="Compact"
-                    offText="Normal"
-                    styles={toggleStyles}
-                />
-                <SelectionZone selection={selection} selectionMode={SelectionMode.multiple}>
-                    <GroupedList
-                        items={items}
-                        // eslint-disable-next-line react/jsx-no-bind
-                        onRenderCell={onRenderCell}
-                        selection={selection}
-                        selectionMode={SelectionMode.multiple}
-                        groups={groups}
-                        compact={isCompactMode}
-                    />
-                </SelectionZone>
-            </div>
-        );
+function NestedSelector({
+  context,
+  allBaseItemsNested,
+  allBaseItemsFlat,
+  selectedFilter,
+  selectedItems,
+  clientUrl,
+  mainEntityName,
+  relatedEntityName,
+  relationshipName,
+  relatedEntityIdFieldName,
+  relatedEntityNameFieldName,
+  relatedEntityParentFieldName,
+  inputFieldName
+}: INestedSelectorProps) {
+  const useStyles = makeStyles({
+    root: {
+      flexGrow: 1
+    },
+    globalFilterCheckbox: {
+      "font-face": "SegoeUI",
+      "font-size": "14px"
     }
-);
+  });
 
+  const [selected, setSelected] = React.useState<string[]>([]);
+  const handleSelect = (event: React.ChangeEvent<{}>, nodeIds: string[]) => {
+    setSelected(nodeIds);
+  };
 
+  const [allItems, setAllItems] = React.useState(allBaseItemsNested);
+  React.useEffect(() => {
+    setAllItems(allBaseItemsNested);
+  }, [allBaseItemsNested]);
 
-// type DataSet = ComponentFramework.PropertyTypes.DataSet;
-// type OptionMetadata = ComponentFramework.PropertyHelper.OptionMetadata;
-// declare var Xrm: any;
+  const [filteredItems, setFilteredItems] = React.useState(allItems);
+  React.useEffect(() => {
+    setFilteredItems(allItems.filter(ai => ai.data[relatedEntityNameFieldName] === selectedFilter)[0].children);
+    setSelected(selectedItems);
+  }, [selectedFilter])
 
-// const toggleStyles: Partial<IToggleStyles> = { root: { marginBottom: '20px' } };
+  const [markedAncestors, setAncestors] = React.useState(selected);
+  React.useEffect(() => {
+    let itemsToExpand: string[] = [];
+    let breadcrumbItems: string[] = [];
 
-// const groupCount = 3;
-// const groupDepth = 3;
-// const items = createListItems(Math.pow(groupCount, groupDepth + 1));
-// const columns = Object.keys(items[0])
-//     .slice(0, 3)
-//     .map(
-//         (key: string): IColumn => ({
-//             key: key,
-//             name: key,
-//             fieldName: key,
-//             minWidth: 300,
-//         }),
-//     );
+    // expand the tree so you can see everyone's pretty face
+    selected.forEach((item) => {
+      let parentThere: boolean = true;
+      let idToFind: string = item;
+      let newBreadcrumb: string = "";
 
-// const groups = createGroups(groupCount, groupDepth, 0, groupCount);
+      while (parentThere == true) {
+        const currentObject = allBaseItemsFlat.filter(fi => fi[relatedEntityIdFieldName] === idToFind)[0];
 
+        if (currentObject) {
+          const parentObject = allBaseItemsFlat.filter(po => po[relatedEntityIdFieldName] === currentObject[relatedEntityParentFieldName])[0];
 
-// // const selection = useConst(() => {
-// //     const s = new Selection();
-// //     s.setItems(items, true);
-// //     return s;
-// // });
+          // don't add the top level names to the breadcrumb
+          if (currentObject[relatedEntityNameFieldName] != selectedFilter) {
+            newBreadcrumb = " / " + currentObject[relatedEntityNameFieldName] + newBreadcrumb;
+          }
 
-// function useSelection() {
-//     // const [selection, setItems] = useState(null);
+          if (parentObject) {
+            if (itemsToExpand.indexOf(parentObject[relatedEntityIdFieldName]) == -1) {
+              itemsToExpand.push(parentObject[relatedEntityIdFieldName]);
+            }
 
-//     const selection = useConst(() => {
-//         const s = new Selection();
-//         s.setItems(items, true);
-//         return s;
-//     });
+            idToFind = parentObject[relatedEntityIdFieldName];
+          } else {
+            parentThere = false;
 
-//     return selection;
-//     // function handleSelectionChange(selectionId: string) {
-//     //   setItems(selectionId);
-//     // }
+            if (newBreadcrumb != "") {
+              breadcrumbItems.push(newBreadcrumb.substr(3));
+            }
+          }
+        } else {
+          parentThere = false;
+        }
+      }
+    });
 
-//     // useEffect(() => {
+    setAncestors(itemsToExpand);
+    setBreadcrumb(breadcrumbItems.sort());
+  }, [selected])
 
-//     //   ChatAPI.subscribeToFriendStatus(friendID, handleStatusChange);
-//     //   return () => {
-//     //     ChatAPI.unsubscribeFromFriendStatus(friendID, handleStatusChange);
-//     //   };
-//     // });
+  const [breadcrumb, setBreadcrumb] = React.useState<string[]>([]);
 
-//     // return isOnline;
-// }
+  function getOnChange(checked: boolean, id: string) {
+    let array = checked
+      ? [...selected, id]
+      : selected.filter(ai => ai !== id);
 
-// export class NestedSelector extends React.Component<INestedSelectorProps> {
-//     private _properties: any;
-//     private _context: any; // ComponentFramework.Context<IInputs>;
+    setSelected(array);
 
-//     private _successCallback: any;
-//     private _relationshipSuccessCallback: any;
+    const recordUrl: string = clientUrl + "/api/data/v9.1/" + mainEntityName + "s(" + (context as any).page.entityId + ")";
 
-//     // private selection: Selection<IObjectWithKey>;
+    // build search string update request first, we'll send it on after we know the association has completed successfully
+    let newString: string = "";
+    array.forEach(item => {
+      newString += allBaseItemsFlat.filter(ai => ai[relatedEntityIdFieldName] === item)[0][relatedEntityNameFieldName] + " ; ";
+    });
 
+    let accountUpdate: any = {};
+    accountUpdate[inputFieldName] = newString;
 
-//     constructor(props: INestedSelectorProps) {
-//         super(props);
-//         this._properties = props;
-//         this._context = this._properties.context;
+    var finalRequest = new XMLHttpRequest();
+    finalRequest.open("PATCH", recordUrl, true);
+    finalRequest.setRequestHeader("Accept", "application/json");
+    finalRequest.setRequestHeader("Content-Type", "application/json; charset=utf-8");
+    finalRequest.setRequestHeader("OData-MaxVersion", "4.0");
+    finalRequest.setRequestHeader("OData-Version", "4.0");
+    finalRequest.onreadystatechange = function () {
+      if (this.readyState == 4 /* complete */) {
+        finalRequest.onreadystatechange = null;
+        if (this.status == 204) { //OK {
+          // alert("Account is updated")
+        } else {
+          var error = JSON.parse(this.response).error;
+          alert(error.message);
+        }
+      }
+    }
 
-//         this.state = {
-//             allItems: [],
-//             filteredItems: [],
-//             selectedItems: []
-//         }
+    if (checked) {
+      var associate = {
+        "@odata.id": recordUrl
+      };
 
-//         console.log(this.props);
+      // add the item to the relationships
+      let req = new XMLHttpRequest();
+      req.open("POST", clientUrl + "/api/data/v9.1/" + relatedEntityName + "s(" + id + ")/" + relationshipName + "/$ref", true);
+      req.setRequestHeader("Accept", "application/json");
+      req.setRequestHeader("Content-Type", "application/json; charset=utf-8");
+      req.setRequestHeader("OData-MaxVersion", "4.0");
+      req.setRequestHeader("OData-Version", "4.0");
+      req.onreadystatechange = function () {
+        if (this.readyState == 4 /* complete */) {
+          req.onreadystatechange = null;
+          if (this.status == 204) {
+            //alert('Record Associated');
+            finalRequest.send(JSON.stringify(accountUpdate));
+          } else {
+            var error = JSON.parse(this.response).error;
+            console.log(this.response);
+            alert(error.message);
+          }
+        }
+      };
+      req.send(JSON.stringify(associate));
+    } else {
+      // remove the item from the relationships
+      var req = new XMLHttpRequest();
+      req.open("DELETE", clientUrl + "/api/data/v9.1/" + relatedEntityName + "s(" + id + ")/" + relationshipName + "/$ref" + "?$id=" + recordUrl, true);
+      req.setRequestHeader("Accept", "application/json");
+      req.setRequestHeader("Content-Type", "application/json; charset=utf-8");
+      req.setRequestHeader("OData-MaxVersion", "4.0");
+      req.setRequestHeader("OData-Version", "4.0");
+      req.onreadystatechange = function () {
+        if (this.readyState == 4 /* complete */) {
+          req.onreadystatechange = null;
+          if (this.status == 204) {
+            //alert('Record Disassociated');
+            finalRequest.send(JSON.stringify(accountUpdate));
+          } else {
+            var error = JSON.parse(this.response).error;
+            alert(error.message);
+          }
+        }
+      };
+      req.send();
+    }
+  };
 
+  const getTreeBreadcrumb = () => {
+    let childItems: any[] = [];
+    breadcrumb.forEach(function (bc) {
+      const rand = 1 + Math.random() * (1000 - 1);
+      childItems.push(<li key={bc + "-" + rand}><em>{bc}</em></li>);
+    });
 
-//     }
+    return (
+      <div className="tree-breadcrumb">
+        <ul className="bc-item-list">
+          {childItems}
+        </ul>
+      </div>
+    )
+  };
 
-//     public getData() {
-//         this._context.webAPI.retrieveMultipleRecords("av_account_av_companytype", "?$filter=" + this._context.page.entityTypeName + "id eq " + this._context.page.entityId, 5000).then(this._relationshipSuccessCallback, this.errorCallback);
-//     }
+  const getTreeItemsFromData = (treeItems: any[]) => {
+    return treeItems.map(treeItemData => {
+      let children = undefined;
+      if (treeItemData.children && treeItemData.children.length > 0) {
+        children = getTreeItemsFromData(treeItemData.children);
+      }
 
-//     public relationshipSuccessCallback(value: any): void | PromiseLike<void> {
-//         if (value != null) {
-//             for (var i in value.entities) {
-//                 // this.selectedItems.push(value.entities[i]["av_companytypeid"]);
-//             }
-//         }
+      return (
+        <TreeItem
+          key={treeItemData.data[relatedEntityIdFieldName]}
+          nodeId={treeItemData.data[relatedEntityIdFieldName]}
+          label={(
+            <div style={{ display: 'flex', alignItems: 'center' }} className={markedAncestors.indexOf(treeItemData.data[relatedEntityIdFieldName]) > -1 ? 'parent' : 'noparent'}>
+              <Checkbox
+                id={`checkbox-${treeItemData.data[relatedEntityIdFieldName]}`}
+                className={classes.globalFilterCheckbox}
+                checked={selected.indexOf(treeItemData.data[relatedEntityIdFieldName]) > -1}
+                onChange={(event) => getOnChange(event.currentTarget.checked, treeItemData.data[relatedEntityIdFieldName])}
+                onClick={e => e.stopPropagation()}
+                color="primary"
+              />
+              <Typography variant="inherit">{treeItemData.data[relatedEntityNameFieldName]}</Typography>
+            </div>
+          )}
+          children={children}
+        />
+      );
+    });
+  };
 
-//         this._context.webAPI.retrieveMultipleRecords("av_companytype", "?$orderby=" + "av_name" + " asc", 5000).then(this._successCallback, this.errorCallback);
-//     }
+  const classes = useStyles();
 
-//     public errorCallback(value: any) {
-//         console.log(value);
-//         alert(value);
-//     }
+  return (
+    <div>
+      <TreeView
+        className={classes.root}
+        defaultCollapseIcon={<ExpandMoreIcon />}
+        defaultExpandIcon={<ChevronRightIcon />}
+        selected={selected}
+        multiSelect
+      >
+        {getTreeBreadcrumb()}
+        {getTreeItemsFromData(filteredItems)}
+      </TreeView>
+    </div>
+  );
+}
 
-//     public addOptions(value: any) {
-//         // for (var i in value.entities) {
-//         // 	var current: any = value.entities[i];
-//         // 	var checked = this.selectedItems.indexOf(<string>current["av_companytypeid"]) > -1;
-
-//         // 	current["selected"] = checked;
-//         // }
-
-//         // this.allItems = arrayToTree(value.entities, {
-//         // 	id: 'av_companytypeid',
-//         // 	parentId: '_av_parent_value',
-//         // 	childrenField: 'children',
-//         // });
-
-//         // this.renderGrid();
-//     }
-
-
-//     public successCallback(value: any): void {
-//         // this.addOptions(value);
-//     }
-
-//     // public getSelection(): Selection<IObjectWithKey> {
-//     //     const selection = useConst(() => {
-//     //         const s = new Selection();
-//     //         s.setItems(items, true);
-//     //         return s;
-//     //     });
-
-//     //     return selection;
-//     // }
-
-//     // public useSelection() {
-//     //     const selection = useConst(() => {
-//     //         const s = new Selection();
-//     //         s.setItems(items, true);
-//     //         return s;
-//     //     });
-
-//     //     return selection;
-//     // }
-
-
-
-
-
-//     // public render(): React.ReactElement<INestedSelectorProps> {
-//     public view: React.FunctionComponent = () => {
-//         const isCompactMode = true;
-
-//         // const selection = useConst(() => {
-//         //     const s = new Selection();
-//         //     s.setItems(items, true);
-//         //     return s;
-//         // });
-//         // let selection: ISelection<IObjectWithKey>; // = new ISelection<IObjectWithKey>;
-//         const selection = useSelection();
-
-//         const onRenderCell = (nestingDepth?: number, item?: IExampleItem, itemIndex?: number): React.ReactNode => {
-//             return item && typeof itemIndex === 'number' && itemIndex > -1 ? (
-//                 <DetailsRow
-//                     columns={columns}
-//                     groupNestingDepth={nestingDepth}
-//                     item={item}
-//                     itemIndex={itemIndex}
-//                     selection={selection}
-//                     selectionMode={SelectionMode.multiple}
-//                     compact={isCompactMode}
-//                 />
-//             ) : null;
-//         };
-
-//         return (
-//             <div>
-//                 <SelectionZone selection={selection} selectionMode={SelectionMode.multiple}>
-//                     <GroupedList
-//                         items={items}
-//                         // eslint-disable-next-line react/jsx-no-bind
-//                         onRenderCell={onRenderCell}
-//                         selection={selection}
-//                         selectionMode={SelectionMode.multiple}
-//                         groups={groups}
-//                         compact={isCompactMode}
-//                     />
-//                 </SelectionZone>
-//             </div>
-//         );
-//     }
-// }
-// // export const NestedSelector = React.memo(function NestedSelectApp({
-// //     context
-// // }: INestedSelectorProps): JSX.Element {
-// //     const isCompactMode = true;
-
-// //     const selection = useConst(() => {
-// //         const s = new Selection();
-// //         s.setItems(items, true);
-// //         return s;
-// //     });
-
-// //     console.log(items);
-// //     console.log(columns);
-// //     console.log(selection);
-
-// //     const onRenderCell = (nestingDepth?: number, item?: IExampleItem, itemIndex?: number): React.ReactNode => {
-// //         return item && typeof itemIndex === 'number' && itemIndex > -1 ? (
-// //             <DetailsRow
-// //                 columns={columns}
-// //                 groupNestingDepth={nestingDepth}
-// //                 item={item}
-// //                 itemIndex={itemIndex}
-// //                 selection={selection}
-// //                 selectionMode={SelectionMode.multiple}
-// //                 compact={isCompactMode}
-// //             />
-// //         ) : null;
-// //     };
-
-// //     return (
-// //         <div>
-// //             <SelectionZone selection={selection} selectionMode={SelectionMode.multiple}>
-// //                 <GroupedList
-// //                     items={items}
-// //                     // eslint-disable-next-line react/jsx-no-bind
-// //                     onRenderCell={onRenderCell}
-// //                     selection={selection}
-// //                     selectionMode={SelectionMode.multiple}
-// //                     groups={groups}
-// //                     compact={isCompactMode}
-// //                 />
-// //             </SelectionZone>
-// //         </div>
-// //     );
-// // }
-// // );
+export default NestedSelector;
